@@ -1,0 +1,60 @@
+# Real Estate Listing Scraper
+
+Este script en Python está diseñado para extraer la fecha de publicación de anuncios inmobiliarios de páginas web y calcular cuánto tiempo han estado en el mercado. Es especialmente útil para analizar tendencias del mercado inmobiliario o para usuarios interesados en la antigüedad de las publicaciones.
+
+## Características
+
+- **Extracción de Fechas**: Utiliza expresiones regulares para buscar automáticamente la fecha de publicación en la página web.
+- **Cálculo de Tiempo en el Mercado**: Determina cuántos días ha estado una propiedad en el mercado desde su publicación.
+- **Sencillez de Uso**: Solo necesitas proporcionar la URL de la publicación.
+- **Zonas Horarias**: Maneja diferentes zonas horarias con `pytz`.
+
+## Requisitos
+
+- Python 3.x
+- Módulos:
+  - `requests`
+  - `beautifulsoup4`
+  - `pytz`
+
+## Instalación
+
+Para instalar las dependencias necesarias:
+
+```sh
+pip install requests beautifulsoup4 pytz
+```
+## Uso
+Clona el repositorio:
+```sh
+git clone https://github.com/tu-usuario/real-estate-listing-scraper.git
+cd real-estate-listing-scraper
+```
+Ejecuta el script:
+```sh
+python real-estate-listing-scraper.py
+```
+Introduce la URL de la publicación inmobiliaria cuando se te solicite.
+
+### Ejemplo
+```text
+Introduce el enlace de la publicación: https://example.com/listing/12345
+Fecha de publicación: 2023-10-01 14:00:00
+Días en el mercado: 45
+```
+
+### Notas
+El script asume que la fecha de publicación está en el cuerpo del texto de la página en uno de los formatos reconocidos. Si encuentras un formato no soportado, revisa y ajusta las expresiones regulares en el script.
+La precisión del cálculo de días en el mercado depende de la hora actual y la zona horaria configurada en el script (por defecto, UTC).
+
+### Contribuciones
+¡Las contribuciones son bienvenidas! Si encuentras un nuevo formato de fecha común o quieres mejorar la funcionalidad, abre un pull request. Asegúrate de leer nuestras directrices de contribución (CONTRIBUTING.md).
+
+### Licencia
+Este proyecto está bajo la MIT License (LICENSE).
+
+
+### Badges
+![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
