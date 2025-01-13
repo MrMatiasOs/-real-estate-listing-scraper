@@ -4,50 +4,83 @@ from datetime import datetime
 import re
 import pytz
 
-def main():
-    url = input("Introduce el enlace de la publicación: ")
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
+def find_date_in_html(html_content):
+    # Define more comprehensive date patterns
     date_patterns = [
-        r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[\+\-]\d{2}:\d{2}',  # ISO 8601 con zona horaria
+        r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[\+\-]\d{2}:\d{2}',  # ISO 8601 with timezone
         r'\d{4}-\d{2}-\d{2}',  # YYYY-MM-DD
         r'\d{2}/\d{2}/\d{4}',  # DD/MM/YYYY
-        # Añadir más patrones según sea necesario
+        r'\d{2}\.\d{2}\.\d{4}',  # DD.MM.YYYY
+        r'\d{2}\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*\d{4}',  # DD Mon YYYY
+        r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}',  # Mon DD, YYYY
     ]
 
-    fecha_publicacion = None
-
     for pattern in date_patterns:
-        match = re.search(pattern, response.text)
+        match = re.search(pattern, html_content, re.IGNORECASE)
         if match:
-            fecha_publicacion_str = match.group()
-            try:
-                if 'T' in fecha_publicacion_str:  # Si es ISO 8601
-                    fecha_publicacion = datetime.strptime(fecha_publicacion_str, "%Y-%m-%dT%H:%M:%S%z")
-                elif '/' in fecha_publicacion_str:  # Si es DD/MM/YYYY
-                    fecha_publicacion = datetime.strptime(fecha_publicacion_str, "%d/%m/%Y")
-                else:  # Asume YYYY-MM-DD
-                    fecha_publicacion = datetime.strptime(fecha_publicacion_str, "%Y-%m-%d")
-                break  # Sal del bucle una vez encontrada la fecha
-            except ValueError:
-                print("Formato de fecha no reconocido:", fecha_publicacion_str)
-                continue
+            date_str = match.group()
+            # Try parsing with different formats
+            formats = [
+                "%Y-%m-%dT%H:%M:%S%z",  # ISO 8601 with timezone
+                "%Y-%m-%d",  # YYYY-MM-DD
+                "%d/%m/%Y",  # DD/MM/YYYY
+                "%d.%m.%Y",  # DD.MM.YYYY
+                "%d %b %Y",  # DD Mon YYYY
+                "%b %d, %Y"  # Mon DD, YYYY
+            ]
+            for fmt in formats:
+                try:
+                    return datetime.strptime(date_str, fmt)
+                except ValueError:
+                    continue
+    return None
     
-    if fecha_publicacion is not None:
-        # Obtener la fecha actual con zona horaria
-        fecha_actual = datetime.now(pytz.timezone('UTC'))  # Asumiendo que quieres UTC, ajusta según necesites
 
-        # Calcular la diferencia entre las dos fechas
+def main():
+    url = input("Introduce el enlace de la publicación: ")
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Will raise an exception for bad status codes
+    except requests.RequestException as e:
+        print(f"Error al obtener la página: {e}")
+        return
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # First, look for date in meta tags
+    meta_date = soup.find('meta', attrs={'property': 'article:published_time'})
+    if meta_date and 'content' in meta_date.attrs:
+        fecha_publicacion = datetime.fromisoformat(meta_date['content'])
+    else:
+        # If not in meta, search the entire HTML content
+        fecha_publicacion = find_date_in_html(response.text)
+
+    if fecha_publicacion is not None:
+        # Ensure fecha_publicacion has timezone info
+        if not fecha_publicacion.tzinfo:  # If the datetime is naive
+            fecha_publicacion = pytz.utc.localize(fecha_publicacion)
+        
+        # Get current date with timezone
+        fecha_actual = datetime.now(pytz.timezone('UTC'))
+
+        # Calculate difference between dates
         diferencia = fecha_actual - fecha_publicacion
 
-        # Convertir la diferencia a días
+        # Convert difference to days
         dias_en_mercado = diferencia.days
 
         print(f"Fecha de publicación: {fecha_publicacion.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"Días en el mercado: {dias_en_mercado}")
     else:
-        print("No se encontró una fecha que coincida con los patrones dados.")
+        print("No se encontró una fecha de publicación que coincida con los patrones dados.")
+        # Optionally, print parts of the HTML where the date might be expected for debugging:
+        possible_date_locations = soup.find_all(['time', 'span', 'p'], string=re.compile(r'\d+'))
+        if possible_date_locations:
+            print("Posibles ubicaciones de la fecha en el HTML:")
+            for loc in possible_date_locations[:5]:  # Limit to first 5 to avoid cluttering output
+                print(loc.prettify())
+
+                
 
 if __name__ == "__main__":
     main()
